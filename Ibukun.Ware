@@ -1,0 +1,119 @@
+-->> Variables -->>
+
+local cc = game:GetService("Workspace").CurrentCamera
+local lp = game.Players.LocalPlayer
+local Mouse = lp:GetMouse()
+local Plr
+
+
+
+-->> Table -->>
+
+local settings = { 
+    aiming = { 
+        toggle = true,
+        locking = false,
+        prediction = 0.12875,
+        part = 'HumanoidRootPart',
+        notifications = true,
+        key = 'q'
+    }
+}
+
+
+
+
+-->> Anticheat Bypass -->>
+
+local old = nil 
+
+old = hookmetamethod(game, "__namecall", function(...)
+    local method = getnamecallmethod()
+
+    if not checkcaller() and method == 'Kick' then
+        return
+    end
+    return old(...)
+end)
+
+
+
+
+
+
+
+-->> Check if Key is pressed -->>
+Mouse.KeyDown:Connect(function(KeyPressed)
+    if KeyPressed == (settings.aiming.key) then
+        if settings.aiming.toggle then
+            if settings.aiming.locking then
+                settings.aiming.locking = false
+                
+                Plr = gcp()
+
+                if settings.aiming.notifications then
+                    game.StarterGui:SetCore("SendNotification", { 
+                        Title = 'Ibukun.Ware',
+                        Text = 'Unlocked'
+                    })
+                end
+            else
+                settings.aiming.locking = true
+                Plr = gcp()
+                game.StarterGui:SetCore("SendNotification", { 
+                    Title = 'Speed',
+                    Text = 'Locked on to: ' .. tostring(Plr.Character.Humanoid.DisplayName)
+                })
+            end
+        end
+    end
+end)
+
+
+
+
+
+
+
+-- GetClosestPlayer Function -->>
+
+function gcp()
+    local target
+    local studs = math.huge -- math.hugeis infinity for those wondering
+
+    for i,v in pairs(game.Players:GetPlayers()) do
+        if v ~= lp and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health ~= 0 and v.Character:FindFirstChild("HumanoidRootPart") then
+            local pos = cc:WorldToViewportPoint(v.Character.PrimaryPart.Position)
+            local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).magnitude
+
+
+            if magnitude < studs then
+                target = v
+                studs = magnitude -- this might be wrong im being retarded rn we will fix errors after :)
+            end
+        end
+    end
+    return target
+end
+
+
+
+
+
+-->> Spoof Bullet Pos -->>
+
+local gmt = getrawmetatable(game)
+setreadonly(gmt, false)
+local old = gmt.__namecall
+
+gmt.__namecall = newcclosure(function(...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if settings.aiming.locking and method == 'FireServer' and args[2] == 'UpdateMousePos' then 
+        args[3] = Plr.Character[settings.aiming.part].Position + Plr.Character[settings.aiming.part].Velocity * settings.aiming.prediction
+
+        return old(unpack(args))
+    end
+    return old(...)
+end)
